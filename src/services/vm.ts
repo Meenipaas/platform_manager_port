@@ -32,7 +32,7 @@ export async function getAgentDetail(params: { id?: number }) {
  * @param options
  * @returns
  */
-export async function addAgent(options?: Record<string, any>) {
+export async function addVirtualMachine(options?: Record<string, any>) {
   return request<Record<string, any>>('/api/vm', {
     method: 'POST',
     ...(options || {}),
@@ -57,8 +57,8 @@ export async function removeAgent(options?: Record<string, any>) {
  * @returns
  */
 export async function testAgentConnect(options?: Record<string, any>) {
-  return request<Record<string, any>>('/api/vm/test', {
-    method: 'POST',
+  return request<Record<string, any>>('/api/vm/connect', {
+    method: 'GET',
     ...(options || {}),
   });
 }

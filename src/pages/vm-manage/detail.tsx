@@ -17,8 +17,8 @@ export function DeployDetail({
 }: {
   open: boolean;
   onClose: () => void;
-  currentRow?: API.AgentInfo;
-  columns: ProColumns<API.AgentInfo>[];
+  currentRow?: API.VirtualMachine;
+  columns: ProColumns<API.VirtualMachine>[];
 }) {
   const ref = useRef<ActionType>();
   const refTask = useRef<ActionType>();
@@ -59,7 +59,7 @@ export function DeployDetail({
     <Drawer width="50%" open={open} onClose={onClose} closable={false}>
       {currentRow?.id && (
         <>
-          <ProDescriptions<API.AgentInfo>
+          <ProDescriptions<API.VirtualMachine>
             column={1}
             actionRef={ref}
             title={currentRow?.name}
@@ -67,7 +67,7 @@ export function DeployDetail({
             params={{
               id: currentRow?.id,
             }}
-            columns={columns as ProDescriptionsItemProps<API.AgentInfo>[]}
+            columns={columns as ProDescriptionsItemProps<API.VirtualMachine>[]}
           />
           <ProDescriptions
             column={1}

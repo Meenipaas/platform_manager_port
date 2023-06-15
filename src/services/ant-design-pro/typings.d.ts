@@ -20,13 +20,13 @@ declare namespace API {
 
   type VirtualMachine = {
     id: string;
-    hostname: string;
-    ip: string;
-    rootPassword: string;
-    totalMemory: number;
-    created_at: Date;
-    updated_at: Date;
-    agentId: string;
+    hostname?: string;
+    ip?: string;
+    rootPassword?: string;
+    totalMemory?: number;
+    created_at?: Date;
+    updated_at?: Date;
+    agentId?: string;
   };
 
   type Task = {
