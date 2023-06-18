@@ -2,11 +2,16 @@ import { Button, message } from 'antd';
 import React, { useState, useRef } from 'react';
 import { PageContainer, FooterToolbar, EditableProTable } from '@ant-design/pro-components';
 import type { ProColumns, ActionType } from '@ant-design/pro-components';
-import { addVirtualMachine, removeAgent, getAgentInfos, testAgentConnect } from '@/services/vm';
+import {
+  addVirtualMachine,
+  removeVMs,
+  getVMListOrInfos,
+  testAgentConnect,
+  updateBasicVirtualMachine,
+} from '@/services/vm';
 import { isValidIP } from '@/utils';
 import { DeployDetail } from './detail';
 import { FormattedMessage } from '@umijs/max';
-
 const handleAdd = async (fields: API.VirtualMachine) => {
   const hide = message.loading('正在添加');
   try {
@@ -35,7 +40,7 @@ const handleRemove = async (selectedRows: API.VirtualMachine[]) => {
   const hide = message.loading('正在删除');
   if (!selectedRows) return true;
   try {
-    await removeAgent({
+    await removeVMs({
       data: {
         ids: selectedRows.map((row) => row.id),
       },
@@ -55,41 +60,38 @@ const TableList: React.FC = () => {
   const actionRef = useRef<ActionType>();
   const [currentRow, setCurrentRow] = useState<API.VirtualMachine>();
   const [selectedRowsState, setSelectedRows] = useState<API.VirtualMachine[]>([]);
-  const [isTestConnect, setTestConnected] = useState<boolean>(false);
-
+  const [isTestConnect, setTestConnected] = useState<Record<string, boolean>>({});
   const [editableKeys, setEditableRowKeys] = useState<React.Key[]>([]);
-  const [dataSource, setDataSource] = useState([]);
-
-  const operationButton = (row: API.VirtualMachine) => {
-    return (
-      <Button
-        type="link"
-        onClick={async () => {
-          actionRef.current?.startEditable(row.id);
-        }}
-      >
-        编辑
-      </Button>
-    );
-  };
+  const [dataSource, setDataSource] = useState<readonly API.VirtualMachine[]>([]);
 
   const testSShConnect = async (vmIp?: string) => {
-    setTestConnected(true);
+    setTestConnected((prevLoadings) => {
+      prevLoadings[vmIp as string] = true;
+      return Object.assign({}, prevLoadings);
+    });
     if (!vmIp) {
-      setTestConnected(false);
+      setTestConnected((prevLoadings) => {
+        prevLoadings[vmIp as string] = false;
+        return Object.assign({}, prevLoadings);
+      });
       return message.error('ip 缺失');
     }
+    let isConnect = false;
     try {
       await testAgentConnect({
         params: {
           ip: vmIp,
         },
       });
-    } catch (error) {
-      setTestConnected(false);
+      isConnect = true;
+    } catch (error) {}
+    setTestConnected((prevLoadings) => {
+      prevLoadings[vmIp as string] = false;
+      return Object.assign({}, prevLoadings);
+    });
+    if (isConnect) {
+      message.success('连接成功');
     }
-    setTestConnected(false);
-    message.success('连接成功');
   };
 
   /**
@@ -98,30 +100,12 @@ const TableList: React.FC = () => {
    * */
   const columns: ProColumns<API.VirtualMachine>[] = [
     {
-      title: 'id',
+      title: 'ID',
+      copyable: true,
       dataIndex: 'id',
       hideInForm: true,
-      editable: false,
-      render: (dom, entity) => {
-        return (
-          <a
-            onClick={() => {
-              if (entity) {
-                setCurrentRow(entity);
-                setShowDetail(true);
-              }
-            }}
-          >
-            {dom}
-          </a>
-        );
-      },
-    },
-    {
-      title: 'ip',
-      dataIndex: 'ip',
-      hideInForm: true,
       ellipsis: true,
+      hideInTable: true,
       hideInSearch: true,
       formItemProps: () => {
         return {
@@ -144,11 +128,54 @@ const TableList: React.FC = () => {
       },
     },
     {
+      title: 'ip',
+      dataIndex: 'ip',
+      copyable: true,
+      hideInForm: true,
+      ellipsis: true,
+      hideInSearch: true,
+      formItemProps: () => {
+        return {
+          rules: [
+            {
+              type: 'string',
+              required: true,
+              message: '请输入IP',
+            },
+            {
+              validator: (_, value: any) => {
+                if (isValidIP(value)) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('非法ip'));
+              },
+            },
+          ],
+        };
+      },
+      render: (dom, entity) => {
+        return (
+          <a
+            onClick={() => {
+              if (entity) {
+                setCurrentRow(entity);
+                setShowDetail(true);
+              }
+            }}
+          >
+            {dom}
+          </a>
+        );
+      },
+    },
+    {
       title: 'root 用户密码',
       dataIndex: 'rootPassword',
       hideInForm: true,
       ellipsis: true,
+      hideInDescriptions: true,
       hideInSearch: true,
+      valueType: 'password',
       render: () => {
         return '******';
       },
@@ -193,30 +220,40 @@ const TableList: React.FC = () => {
       title: '操作',
       dataIndex: 'option',
       valueType: 'option',
-      render: (_, record) => [
-        operationButton(record),
-        <Button
-          loading={isTestConnect}
-          type="link"
-          key="delete"
-          onClick={() => {
-            testSShConnect(record.ip);
-          }}
-        >
-          测试连接
-        </Button>,
-        <Button
-          danger
-          type="link"
-          key="delete"
-          onClick={async () => {
-            await handleRemove([record]);
-            actionRef.current?.reloadAndRest?.();
-          }}
-        >
-          删除
-        </Button>,
-      ],
+      render: (_, record) => {
+        return (
+          <>
+            <a
+              key="edit"
+              onClick={async () => {
+                actionRef.current?.startEditable(record.id);
+              }}
+            >
+              编辑
+            </a>
+            <Button
+              loading={isTestConnect[record.ip as string]}
+              type="link"
+              key="connect"
+              onClick={() => {
+                testSShConnect(record.ip);
+              }}
+            >
+              测试连接
+            </Button>
+            <a
+              type="link"
+              key="delete"
+              onClick={async () => {
+                await handleRemove([record]);
+                actionRef.current?.reloadAndRest?.();
+              }}
+            >
+              删除
+            </a>
+          </>
+        );
+      },
     },
   ];
 
@@ -238,12 +275,24 @@ const TableList: React.FC = () => {
         editable={{
           type: 'multiple',
           editableKeys,
-          onSave: async (rowKey, data) => {
-            await handleAdd(data);
+          onSave: async (rowKey, data, originRow) => {
+            if (data.ip !== originRow.ip || data.rootPassword !== originRow.rootPassword) {
+              await updateBasicVirtualMachine({
+                data: {
+                  id: data.id,
+                  ip: data.ip,
+                  rootPassword: data.rootPassword,
+                },
+              });
+              message.success('更新成功');
+            } else {
+              await handleAdd(data);
+              message.success('添加成功');
+            }
           },
           onChange: setEditableRowKeys,
         }}
-        request={getAgentInfos}
+        request={getVMListOrInfos}
         columns={columns}
         rowSelection={{
           onChange: (_, selectedRows) => {

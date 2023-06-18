@@ -12,13 +12,13 @@ export default [
   },
   {
     path: '/deploy',
-    name: 'deploy',
+    name: '部署管理',
     icon: 'smile',
     component: './deploy',
   },
   {
     path: '/',
-    redirect: '/deploy',
+    redirect: '/vm-manage',
   },
   {
     component: './404',

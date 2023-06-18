@@ -2,14 +2,14 @@
 /* eslint-disable */
 import { request } from '@umijs/max';
 
-export async function getAgentInfos(
+export async function getVMListOrInfos(
   params: {
     current?: number;
     pageSize?: number;
   },
   options?: Record<string, any>,
 ) {
-  return request<API.AgentInfo[]>('/api/vm', {
+  return request<API.VirtualMachine[]>('/api/vm', {
     method: 'GET',
     params: {
       ...params,
@@ -18,8 +18,8 @@ export async function getAgentInfos(
   });
 }
 
-export async function getAgentDetail(params: { id?: number }) {
-  return request<API.AgentInfo[]>('/api/vm', {
+export async function getVmInfo(params: { id?: string }) {
+  return request<API.VirtualMachine[]>('/api/vm', {
     method: 'GET',
     params: {
       ...params,
@@ -44,7 +44,7 @@ export async function addVirtualMachine(options?: Record<string, any>) {
  * @param options
  * @returns
  */
-export async function removeAgent(options?: Record<string, any>) {
+export async function removeVMs(options?: Record<string, any>) {
   return request<Record<string, any>>('/api/vm', {
     method: 'DELETE',
     ...(options || {}),
@@ -63,16 +63,9 @@ export async function testAgentConnect(options?: Record<string, any>) {
   });
 }
 
-export async function getTask(options?: Record<string, any>) {
-  return request<API.Task>('/api/task', {
-    method: 'get',
-    ...(options || {}),
-  });
-}
-
-export async function getPerformance(options?: Record<string, any>) {
-  return request<API.Performance>('/api/performance', {
-    method: 'get',
+export async function updateBasicVirtualMachine(options?: Record<string, any>) {
+  return request<API.Performance>('/api/vm/basic_info', {
+    method: 'put',
     ...(options || {}),
   });
 }
